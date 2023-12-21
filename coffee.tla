@@ -98,12 +98,13 @@ fair process User = "User" begin
         nog := FALSE;
     getGlass:
         await w = TRUE;
+        w := FALSE;
         glassRemoved := TRUE; 
 end process;
 
 end algorithm
 *)
-\* BEGIN TRANSLATION (chksum(pcal) = "2dcbe62d" /\ chksum(tla) = "a9409792")
+\* BEGIN TRANSLATION (chksum(pcal) = "9aa84a74" /\ chksum(tla) = "5f967dfe")
 \* Label s7 of procedure NoCoffee at line 40 col 5 changed to s7_
 VARIABLES init, menu, term, gl, cp, opc, water, p, o, w, nog, glassRemoved, 
           okPressed, pass, pc, stack
@@ -254,9 +255,10 @@ setGlass == /\ pc["User"] = "setGlass"
 
 getGlass == /\ pc["User"] = "getGlass"
             /\ w = TRUE
+            /\ w' = FALSE
             /\ glassRemoved' = TRUE
             /\ pc' = [pc EXCEPT !["User"] = "Done"]
-            /\ UNCHANGED << init, menu, term, gl, cp, opc, water, p, o, w, nog, 
+            /\ UNCHANGED << init, menu, term, gl, cp, opc, water, p, o, nog, 
                             okPressed, pass, stack >>
 
 User == in \/ setGlass \/ getGlass
