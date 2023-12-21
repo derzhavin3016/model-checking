@@ -15,8 +15,7 @@ variables
     w = FALSE,
     nog = FALSE,
     glassRemoved = FALSE,
-    okPressed = FALSE,
-    pass = FALSE;
+    okPressed = FALSE;
     
 define
 \* SAFETY
@@ -32,12 +31,13 @@ procedure NoCoffee()
 begin
    s5:
     cp := FALSE;
-    await pass = TRUE;
+    goto s5;
    s6:
     p := TRUE;
     o := TRUE;
-   s7:
-    await o = FALSE;
+    goto s6;
+   s8:
+    o := FALSE;
     p := FALSE;
     goto to_ret;
    to_ret:
@@ -47,15 +47,17 @@ end procedure;
 fair process Machine = "Machine" begin
     s0:
         await init = TRUE;
+        init := FALSE;
         glassRemoved := FALSE;
     s1:
         while (TRUE) do
         init := FALSE;
         menu := TRUE;
-            either 
+           either 
                 s9:
                     nog := TRUE;
-                    await nog = FALSE;
+                    await glassRemoved = TRUE;
+                    glassRemoved := FALSE;
                     goto s1;
             or
                 s2:
@@ -83,6 +85,7 @@ fair process Machine = "Machine" begin
                             water := FALSE;
                             w := TRUE;
                             await glassRemoved = TRUE;
+                            glassRemoved := FALSE;
                             gl := FALSE;
                             goto s0;
                     end either;
@@ -93,21 +96,27 @@ end process;
 fair process User = "User" begin
     in:
       init := TRUE;
-    setGlass:
+    cyc:
+    while (TRUE) do
+    either setGlass:
         await nog = TRUE;
         nog := FALSE;
+    or
     getGlass:
         await w = TRUE;
         w := FALSE;
-        glassRemoved := TRUE; 
+        glassRemoved := TRUE;
+        goto in;
+    end either; 
+    end while;
 end process;
 
 end algorithm
 *)
-\* BEGIN TRANSLATION (chksum(pcal) = "9aa84a74" /\ chksum(tla) = "5f967dfe")
-\* Label s7 of procedure NoCoffee at line 40 col 5 changed to s7_
+\* BEGIN TRANSLATION (chksum(pcal) = "4202a052" /\ chksum(tla) = "37b5def8")
+\* Label s8 of procedure NoCoffee at line 40 col 5 changed to s8_
 VARIABLES init, menu, term, gl, cp, opc, water, p, o, w, nog, glassRemoved, 
-          okPressed, pass, pc, stack
+          okPressed, pc, stack
 
 (* define statement *)
 NOGLASSPAY == (term => gl)
@@ -119,7 +128,7 @@ WILLGOTOPAY == ([](init ~> <>term))
 
 
 vars == << init, menu, term, gl, cp, opc, water, p, o, w, nog, glassRemoved, 
-           okPressed, pass, pc, stack >>
+           okPressed, pc, stack >>
 
 ProcSet == {"Machine"} \cup {"User"}
 
@@ -137,46 +146,45 @@ Init == (* Global variables *)
         /\ nog = FALSE
         /\ glassRemoved = FALSE
         /\ okPressed = FALSE
-        /\ pass = FALSE
         /\ stack = [self \in ProcSet |-> << >>]
         /\ pc = [self \in ProcSet |-> CASE self = "Machine" -> "s0"
                                         [] self = "User" -> "in"]
 
 s5(self) == /\ pc[self] = "s5"
             /\ cp' = FALSE
-            /\ pass = TRUE
-            /\ pc' = [pc EXCEPT ![self] = "s6"]
+            /\ pc' = [pc EXCEPT ![self] = "s5"]
             /\ UNCHANGED << init, menu, term, gl, opc, water, p, o, w, nog, 
-                            glassRemoved, okPressed, pass, stack >>
+                            glassRemoved, okPressed, stack >>
 
 s6(self) == /\ pc[self] = "s6"
             /\ p' = TRUE
             /\ o' = TRUE
-            /\ pc' = [pc EXCEPT ![self] = "s7_"]
+            /\ pc' = [pc EXCEPT ![self] = "s6"]
             /\ UNCHANGED << init, menu, term, gl, cp, opc, water, w, nog, 
-                            glassRemoved, okPressed, pass, stack >>
+                            glassRemoved, okPressed, stack >>
 
-s7_(self) == /\ pc[self] = "s7_"
-             /\ o = FALSE
+s8_(self) == /\ pc[self] = "s8_"
+             /\ o' = FALSE
              /\ p' = FALSE
              /\ pc' = [pc EXCEPT ![self] = "to_ret"]
-             /\ UNCHANGED << init, menu, term, gl, cp, opc, water, o, w, nog, 
-                             glassRemoved, okPressed, pass, stack >>
+             /\ UNCHANGED << init, menu, term, gl, cp, opc, water, w, nog, 
+                             glassRemoved, okPressed, stack >>
 
 to_ret(self) == /\ pc[self] = "to_ret"
                 /\ pc' = [pc EXCEPT ![self] = Head(stack[self]).pc]
                 /\ stack' = [stack EXCEPT ![self] = Tail(stack[self])]
                 /\ UNCHANGED << init, menu, term, gl, cp, opc, water, p, o, w, 
-                                nog, glassRemoved, okPressed, pass >>
+                                nog, glassRemoved, okPressed >>
 
-NoCoffee(self) == s5(self) \/ s6(self) \/ s7_(self) \/ to_ret(self)
+NoCoffee(self) == s5(self) \/ s6(self) \/ s8_(self) \/ to_ret(self)
 
 s0 == /\ pc["Machine"] = "s0"
       /\ init = TRUE
+      /\ init' = FALSE
       /\ glassRemoved' = FALSE
       /\ pc' = [pc EXCEPT !["Machine"] = "s1"]
-      /\ UNCHANGED << init, menu, term, gl, cp, opc, water, p, o, w, nog, 
-                      okPressed, pass, stack >>
+      /\ UNCHANGED << menu, term, gl, cp, opc, water, p, o, w, nog, okPressed, 
+                      stack >>
 
 s1 == /\ pc["Machine"] = "s1"
       /\ init' = FALSE
@@ -184,14 +192,15 @@ s1 == /\ pc["Machine"] = "s1"
       /\ \/ /\ pc' = [pc EXCEPT !["Machine"] = "s9"]
          \/ /\ pc' = [pc EXCEPT !["Machine"] = "s2"]
       /\ UNCHANGED << term, gl, cp, opc, water, p, o, w, nog, glassRemoved, 
-                      okPressed, pass, stack >>
+                      okPressed, stack >>
 
 s9 == /\ pc["Machine"] = "s9"
       /\ nog' = TRUE
-      /\ nog' = FALSE
+      /\ glassRemoved = TRUE
+      /\ glassRemoved' = FALSE
       /\ pc' = [pc EXCEPT !["Machine"] = "s1"]
-      /\ UNCHANGED << init, menu, term, gl, cp, opc, water, p, o, w, 
-                      glassRemoved, okPressed, pass, stack >>
+      /\ UNCHANGED << init, menu, term, gl, cp, opc, water, p, o, w, okPressed, 
+                      stack >>
 
 s2 == /\ pc["Machine"] = "s2"
       /\ gl' = TRUE
@@ -201,7 +210,7 @@ s2 == /\ pc["Machine"] = "s2"
          \/ /\ pc' = [pc EXCEPT !["Machine"] = "s3"]
          \/ /\ pc' = [pc EXCEPT !["Machine"] = "s4"]
       /\ UNCHANGED << init, menu, cp, opc, water, p, o, w, nog, glassRemoved, 
-                      okPressed, pass, stack >>
+                      okPressed, stack >>
 
 s3 == /\ pc["Machine"] = "s3"
       /\ term' = FALSE
@@ -213,55 +222,61 @@ s3 == /\ pc["Machine"] = "s3"
          \/ /\ pc' = [pc EXCEPT !["Machine"] = "s8"]
             /\ stack' = stack
       /\ UNCHANGED << init, menu, gl, opc, water, p, o, w, nog, glassRemoved, 
-                      okPressed, pass >>
+                      okPressed >>
 
 s8 == /\ pc["Machine"] = "s8"
       /\ cp' = FALSE
       /\ opc' = TRUE
       /\ pc' = [pc EXCEPT !["Machine"] = "s4"]
       /\ UNCHANGED << init, menu, term, gl, water, p, o, w, nog, glassRemoved, 
-                      okPressed, pass, stack >>
+                      okPressed, stack >>
 
 s4 == /\ pc["Machine"] = "s4"
       /\ water' = TRUE
       /\ opc' = FALSE
       /\ pc' = [pc EXCEPT !["Machine"] = "s7"]
       /\ UNCHANGED << init, menu, term, gl, cp, p, o, w, nog, glassRemoved, 
-                      okPressed, pass, stack >>
+                      okPressed, stack >>
 
 s7 == /\ pc["Machine"] = "s7"
       /\ water' = FALSE
       /\ w' = TRUE
       /\ glassRemoved = TRUE
+      /\ glassRemoved' = FALSE
       /\ gl' = FALSE
       /\ pc' = [pc EXCEPT !["Machine"] = "s0"]
-      /\ UNCHANGED << init, menu, term, cp, opc, p, o, nog, glassRemoved, 
-                      okPressed, pass, stack >>
+      /\ UNCHANGED << init, menu, term, cp, opc, p, o, nog, okPressed, stack >>
 
 Machine == s0 \/ s1 \/ s9 \/ s2 \/ s3 \/ s8 \/ s4 \/ s7
 
 in == /\ pc["User"] = "in"
       /\ init' = TRUE
-      /\ pc' = [pc EXCEPT !["User"] = "setGlass"]
+      /\ pc' = [pc EXCEPT !["User"] = "cyc"]
       /\ UNCHANGED << menu, term, gl, cp, opc, water, p, o, w, nog, 
-                      glassRemoved, okPressed, pass, stack >>
+                      glassRemoved, okPressed, stack >>
+
+cyc == /\ pc["User"] = "cyc"
+       /\ \/ /\ pc' = [pc EXCEPT !["User"] = "setGlass"]
+          \/ /\ pc' = [pc EXCEPT !["User"] = "getGlass"]
+       /\ UNCHANGED << init, menu, term, gl, cp, opc, water, p, o, w, nog, 
+                       glassRemoved, okPressed, stack >>
 
 setGlass == /\ pc["User"] = "setGlass"
             /\ nog = TRUE
             /\ nog' = FALSE
-            /\ pc' = [pc EXCEPT !["User"] = "getGlass"]
+            /\ pc' = [pc EXCEPT !["User"] = "cyc"]
             /\ UNCHANGED << init, menu, term, gl, cp, opc, water, p, o, w, 
-                            glassRemoved, okPressed, pass, stack >>
+                            glassRemoved, okPressed, stack >>
 
 getGlass == /\ pc["User"] = "getGlass"
             /\ w = TRUE
             /\ w' = FALSE
             /\ glassRemoved' = TRUE
-            /\ pc' = [pc EXCEPT !["User"] = "Done"]
+            /\ pc' = [pc EXCEPT !["User"] = "in"]
             /\ UNCHANGED << init, menu, term, gl, cp, opc, water, p, o, nog, 
-                            okPressed, pass, stack >>
+                            okPressed, stack >>
 
-User == in \/ setGlass \/ getGlass
+User == in \/ cyc \/ setGlass \/ getGlass
 
 (* Allow infinite stuttering to prevent deadlock on termination. *)
 Terminating == /\ \A self \in ProcSet: pc[self] = "Done"
